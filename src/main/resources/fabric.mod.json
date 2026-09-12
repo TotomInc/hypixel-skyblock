@@ -1,31 +1,29 @@
 {
 	"schemaVersion": 1,
-	"id": "modid",
+	"id": "hypixelskyblock",
 	"version": "${version}",
-	"name": "Example Mod",
-	"description": "This is an example description! Tell everyone what your mod is about!",
+	"name": "Hypixel SkyBlock",
+	"description": "Client helper for Hypixel SkyBlock. Tracks Ender Nodes in The End and draws through-wall frames around confirmed nodes.",
 	"authors": [
-		"Me!"
+		"TotomInc"
 	],
 	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
+		"sources": "https://github.com/TotomInc/hypixel-skyblock"
 	},
 	"license": "CC0-1.0",
-	"icon": "assets/modid/icon.png",
-	"environment": "*",
+	"icon": "assets/hypixelskyblock/icon.png",
+	"environment": "client",
 	"entrypoints": {
 		"main": [
-			"com.example.ExampleMod"
+			"dev.totominc.skyblock.SkyblockMod"
 		],
 		"client": [
-			"com.example.client.ExampleModClient"
+			"dev.totominc.skyblock.client.SkyblockClient"
 		]
 	},
 	"mixins": [
-		"modid.mixins.json",
 		{
-			"config": "modid.client.mixins.json",
+			"config": "hypixelskyblock.client.mixins.json",
 			"environment": "client"
 		}
 	],

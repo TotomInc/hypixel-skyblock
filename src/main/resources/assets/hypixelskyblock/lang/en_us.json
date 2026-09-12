@@ -1,0 +1,9 @@
+{
+	"key.category.hypixelskyblock.skyblock": "Hypixel SkyBlock",
+	"key.hypixelskyblock.toggle_ender_nodes": "Toggle Ender Node Helper",
+	"hypixelskyblock.ender_nodes.enabled": "Ender Node Helper enabled",
+	"hypixelskyblock.ender_nodes.disabled": "Ender Node Helper disabled",
+	"hypixelskyblock.ender_nodes.status": "Ender Node Helper: %s (%s tracked)",
+	"hypixelskyblock.ender_nodes.debug_marked": "Marked an Ender Node at %s",
+	"hypixelskyblock.ender_nodes.debug_cleared": "Cleared tracked Ender Nodes"
+}

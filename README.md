@@ -1,28 +1,40 @@
 # Hypixel SkyBlock
 
-Fabric client mod for Hypixel SkyBlock, targeting Minecraft 26.2. The first feature is an Ender Node tracker for The End, modeled on [Skyblocker](https://github.com/SkyblockerMod/Skyblocker)'s helper.
+Unofficial Fabric client helper for [Hypixel SkyBlock](https://hypixel.net/). Currently focused on The End: it finds Ender Nodes from their particles and draws through-wall frames around them.
+
+Not affiliated with Hypixel or Mojang.
+
+## Requirements
+
+- Minecraft **26.2**
+- [Fabric Loader](https://fabricmc.net/use/installer/) **0.19.5+**
+- [Fabric API](https://modrinth.com/mod/fabric-api)
+- Java **25**
 
 ## Features
 
 - Detects SkyBlock and **The End** from the Hypixel sidebar
-- Confirms Ender Nodes from portal and witch particles at any distance the server sends them (far unloaded chunks confirm from a single complete face)
-- Draws a cyan **through-wall frame** (plus a translucent fill) around each confirmed node
+- Confirms Ender Nodes from portal and witch particles at any distance the server sends them
+- Draws a cyan through-wall frame (plus a translucent fill) around each confirmed node
 - Rechecks about once a second and drops nodes that go silent or whose block is gone
-- `/endernodes` status, `/endernodes toggle`, and debug commands to mark/clear nodes
+- `/endernodes` status, `/endernodes toggle`, and debug mark/clear commands
 
-## Setup
+## Install
 
-1. Install JDK 25
-2. Import the Gradle project in your IDE, or run `./gradlew genSources` then `./gradlew runClient`
-3. Put the built jar from `build/libs/` into your Minecraft `mods` folder along with Fabric Loader and Fabric API
+1. Install Fabric Loader for Minecraft 26.2
+2. Put [Fabric API](https://modrinth.com/mod/fabric-api) and this mod’s jar in your `mods` folder
+3. Join Hypixel SkyBlock and go to The End
 
-## In-game
+Optional: bind **Toggle Ender Node Helper** in Controls. Settings are saved to `.minecraft/config/hypixelskyblock.json`.
 
-- Open **Controls** and bind **Toggle Ender Node Helper** if you want a hotkey
-- Config is written to `.minecraft/config/hypixelskyblock.json`
+## Build
 
-Detection only runs while the sidebar shows SkyBlock and the area is The End.
+```bash
+./gradlew build
+```
+
+The playable jar is `build/libs/hypixel-skyblock-0.1.0.jar` (skip the `-sources` jar).
 
 ## License
 
-CC0-1.0, same as the Fabric example mod this project started from.
+[CC0-1.0](LICENSE)

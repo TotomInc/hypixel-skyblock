@@ -60,7 +60,7 @@ public final class ThroughWallBoxRenderer {
 	}
 
 	public static void extract(List<BlockPos> nodes) {
-		extractedNodes = List.copyOf(nodes);
+		extractedNodes = nodes;
 	}
 
 	public static void close() {

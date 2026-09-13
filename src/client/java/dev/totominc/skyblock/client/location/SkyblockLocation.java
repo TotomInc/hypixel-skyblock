@@ -16,60 +16,39 @@ import net.minecraft.world.scores.ScoreHolder;
 import net.minecraft.world.scores.Scoreboard;
 
 /**
- * Lightweight Hypixel SkyBlock location detector based on the server address
- * and sidebar scoreboard. The End is identified from the area line, matching
- * the scoreboard-driven approach used by Skyblocker.
+ * Detects Hypixel SkyBlock and The End from the server address and sidebar.
  */
 public final class SkyblockLocation {
 	private static final String AREA_ICON = "\uE067";
 	private static final String RIFT_AREA_ICON = "\uE020";
 
-	private static boolean onHypixel;
-	private static boolean onSkyblock;
 	private static boolean inTheEnd;
-	private static String area = "";
 
 	private SkyblockLocation() {
-	}
-
-	public static boolean isOnHypixel() {
-		return onHypixel;
-	}
-
-	public static boolean isOnSkyblock() {
-		return onSkyblock;
 	}
 
 	public static boolean isInTheEnd() {
 		return inTheEnd;
 	}
 
-	public static String area() {
-		return area;
-	}
-
 	public static void reset() {
-		onHypixel = false;
-		onSkyblock = false;
 		inTheEnd = false;
-		area = "";
 	}
 
 	public static void update(Minecraft client) {
-		onHypixel = isConnectedToHypixel(client);
-
-		List<String> sidebar = readSidebar(client);
-		String title = sidebar.isEmpty() ? "" : sidebar.getFirst();
-		onSkyblock = onHypixel && containsIgnoreCase(title, "SKYBLOCK");
-
-		if (!onSkyblock) {
+		if (!isConnectedToHypixel(client)) {
 			inTheEnd = false;
-			area = "";
 			return;
 		}
 
-		area = parseArea(sidebar);
-		inTheEnd = "The End".equalsIgnoreCase(area);
+		List<String> sidebar = readSidebar(client);
+
+		if (sidebar.isEmpty() || !containsIgnoreCase(sidebar.getFirst(), "SKYBLOCK")) {
+			inTheEnd = false;
+			return;
+		}
+
+		inTheEnd = "The End".equalsIgnoreCase(parseArea(sidebar));
 	}
 
 	private static boolean isConnectedToHypixel(Minecraft client) {

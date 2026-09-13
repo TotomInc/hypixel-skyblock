@@ -1,6 +1,6 @@
 package dev.totominc.skyblock.client.end;
 
-import java.util.EnumMap;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -15,48 +15,44 @@ import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.protocol.game.ClientboundLevelParticlesPacket;
 import net.minecraft.util.Mth;
-import net.minecraft.world.level.ClipContext;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.HitResult;
-import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.Level;
 
 import dev.totominc.skyblock.client.config.SkyblockConfig;
-import dev.totominc.skyblock.client.event.ParticleEvents;
 import dev.totominc.skyblock.client.location.SkyblockLocation;
 import dev.totominc.skyblock.client.render.ThroughWallBoxRenderer;
 
 /**
- * Detects Hypixel SkyBlock Ender Nodes from portal/witch particle packets at
- * any distance the server sends them. Face-offset confirmation follows
- * Skyblocker's {@code EnderNodes} helper: particles spawn 0.25 blocks off an
- * exposed face. Loaded chunks still require every air-adjacent face to reach
- * five portal and five witch particles; unloaded (far) chunks confirm from a
- * single complete face so nodes beyond the player's loaded area still register.
- *
- * <p>A one-second clock drops nodes that stop emitting particles or whose block
- * is gone, so mined or despawned nodes do not linger.
+ * Confirms Hypixel SkyBlock Ender Nodes from portal/witch particles that spawn
+ * 0.25 blocks off an exposed face. Far, unloaded chunks confirm from a single
+ * complete face. A one-second clock drops nodes that go silent or whose block
+ * is gone.
  */
 public final class EnderNodeTracker {
+	private static final ParticleType<?> PORTAL = ParticleTypes.PORTAL.getType();
+	private static final ParticleType<?> WITCH = ParticleTypes.WITCH.getType();
 	private static final long CONFIRM_COOLDOWN_MS = 2_000L;
 	private static final long STALE_MS = 10_000L;
 	private static final int PARTICLES_PER_FACE = 5;
 
 	private static final Map<BlockPos, EnderNode> NODES = new HashMap<>();
+	private static List<BlockPos> visibleNodes = List.of();
 
 	private EnderNodeTracker() {
 	}
 
 	public static void init() {
-		ParticleEvents.FROM_SERVER.register(EnderNodeTracker::onParticle);
-		LevelExtractionEvents.END_EXTRACTION.register(context -> ThroughWallBoxRenderer.extract(visibleNodes()));
+		LevelExtractionEvents.END_EXTRACTION.register(context -> ThroughWallBoxRenderer.extract(visibleNodes));
 	}
 
 	public static void reset() {
 		NODES.clear();
+		visibleNodes = List.of();
 	}
 
 	public static void remove(BlockPos pos) {
-		NODES.remove(pos);
+		if (NODES.remove(pos) != null) {
+			refreshVisible();
+		}
 	}
 
 	public static int trackedCount() {
@@ -64,40 +60,43 @@ public final class EnderNodeTracker {
 	}
 
 	public static void markDebug(BlockPos pos) {
-		EnderNode node = NODES.computeIfAbsent(pos.immutable(), EnderNode::new);
-		node.forceConfirm();
+		NODES.computeIfAbsent(pos.immutable(), EnderNode::new).forceConfirm();
+		refreshVisible();
 	}
 
-	/**
-	 * Recurring pass: confirm nodes from accumulated particles, then drop any
-	 * that have gone silent or whose block is no longer there.
-	 */
 	public static void tick(Minecraft client) {
 		if (!shouldProcess()) {
+			if (!visibleNodes.isEmpty()) {
+				visibleNodes = List.of();
+			}
+
 			return;
 		}
 
 		long now = System.currentTimeMillis();
-		Iterator<Map.Entry<BlockPos, EnderNode>> iterator = NODES.entrySet().iterator();
+		Iterator<EnderNode> iterator = NODES.values().iterator();
 
 		while (iterator.hasNext()) {
-			EnderNode node = iterator.next().getValue();
-			node.update(client, now);
+			EnderNode node = iterator.next();
+			node.confirmIfReady(client, now);
 
-			if (node.shouldDiscard(client, now)) {
+			if (node.shouldDiscard(client.level, now)) {
 				iterator.remove();
 			}
 		}
+
+		refreshVisible();
 	}
 
-	private static void onParticle(ClientboundLevelParticlesPacket packet) {
+	public static void onParticle(ClientboundLevelParticlesPacket packet) {
 		if (!shouldProcess()) {
 			return;
 		}
 
-		ParticleType<?> particleType = packet.getParticle().getType();
+		ParticleType<?> type = packet.getParticle().getType();
+		boolean portal = PORTAL.equals(type);
 
-		if (!ParticleTypes.PORTAL.getType().equals(particleType) && !ParticleTypes.WITCH.getType().equals(particleType)) {
+		if (!portal && !WITCH.equals(type)) {
 			return;
 		}
 
@@ -108,38 +107,37 @@ public final class EnderNodeTracker {
 		double yFrac = Mth.positiveModulo(y, 1);
 		double zFrac = Mth.positiveModulo(z, 1);
 		BlockPos pos;
-		Direction direction;
+		int face;
 
 		if (yFrac == 0.25) {
 			pos = BlockPos.containing(x, y - 1, z);
-			direction = Direction.UP;
+			face = Direction.UP.get3DDataValue();
 		} else if (yFrac == 0.75) {
 			pos = BlockPos.containing(x, y + 1, z);
-			direction = Direction.DOWN;
+			face = Direction.DOWN.get3DDataValue();
 		} else if (xFrac == 0.25) {
 			pos = BlockPos.containing(x - 1, y, z);
-			direction = Direction.EAST;
+			face = Direction.EAST.get3DDataValue();
 		} else if (xFrac == 0.75) {
 			pos = BlockPos.containing(x + 1, y, z);
-			direction = Direction.WEST;
+			face = Direction.WEST.get3DDataValue();
 		} else if (zFrac == 0.25) {
 			pos = BlockPos.containing(x, y, z - 1);
-			direction = Direction.SOUTH;
+			face = Direction.SOUTH.get3DDataValue();
 		} else if (zFrac == 0.75) {
 			pos = BlockPos.containing(x, y, z + 1);
-			direction = Direction.NORTH;
+			face = Direction.NORTH.get3DDataValue();
 		} else {
 			return;
 		}
 
 		EnderNode node = NODES.computeIfAbsent(pos.immutable(), EnderNode::new);
-		ParticleCounts counts = node.particles.get(direction);
 		node.lastParticleAt = System.currentTimeMillis();
 
-		if (ParticleTypes.PORTAL.getType().equals(particleType)) {
-			counts.portal++;
+		if (portal) {
+			node.portal[face]++;
 		} else {
-			counts.witch++;
+			node.witch[face]++;
 		}
 	}
 
@@ -148,104 +146,89 @@ public final class EnderNodeTracker {
 		return config.enderNodeHelper && (SkyblockLocation.isInTheEnd() || config.debugForceTheEnd);
 	}
 
-	private static List<BlockPos> visibleNodes() {
-		if (!shouldProcess()) {
-			return List.of();
+	private static void refreshVisible() {
+		if (NODES.isEmpty()) {
+			visibleNodes = List.of();
+			return;
 		}
 
-		return NODES.values().stream()
-			.filter(EnderNode::shouldRender)
-			.map(node -> node.pos)
-			.toList();
+		List<BlockPos> confirmed = new ArrayList<>(NODES.size());
+
+		for (EnderNode node : NODES.values()) {
+			if (node.confirmed) {
+				confirmed.add(node.pos);
+			}
+		}
+
+		visibleNodes = List.copyOf(confirmed);
 	}
 
 	private static final class EnderNode {
 		private final BlockPos pos;
-		private final Map<Direction, ParticleCounts> particles = new EnumMap<>(Direction.class);
+		private final int[] portal = new int[6];
+		private final int[] witch = new int[6];
 		private long lastConfirmed;
 		private long lastParticleAt;
-		private boolean seen;
+		private boolean confirmed;
 		private boolean pinned;
 
 		private EnderNode(BlockPos pos) {
 			this.pos = pos;
-
-			for (Direction direction : Direction.values()) {
-				particles.put(direction, new ParticleCounts());
-			}
 		}
 
 		private void forceConfirm() {
 			long now = System.currentTimeMillis();
 			lastConfirmed = now;
 			lastParticleAt = now;
-			seen = true;
+			confirmed = true;
 			pinned = true;
 		}
 
-		private void update(Minecraft client, long now) {
-			updateSeen(client);
-
+		private void confirmIfReady(Minecraft client, long now) {
 			if (lastConfirmed + CONFIRM_COOLDOWN_MS > now || client.level == null) {
 				return;
 			}
 
-			if (!hasEnoughParticles(client)) {
+			if (!hasEnoughParticles(client.level)) {
 				return;
 			}
 
 			lastConfirmed = now;
+			confirmed = true;
 
-			for (ParticleCounts counts : particles.values()) {
-				counts.portal = 0;
-				counts.witch = 0;
+			for (int i = 0; i < 6; i++) {
+				portal[i] = 0;
+				witch[i] = 0;
 			}
 		}
 
-		private boolean hasEnoughParticles(Minecraft client) {
-			boolean chunkLoaded = client.level.hasChunk(pos.getX() >> 4, pos.getZ() >> 4);
+		private boolean hasEnoughParticles(Level level) {
+			if (!level.hasChunk(pos.getX() >> 4, pos.getZ() >> 4)) {
+				for (int i = 0; i < 6; i++) {
+					if (portal[i] >= PARTICLES_PER_FACE && witch[i] >= PARTICLES_PER_FACE) {
+						return true;
+					}
+				}
 
-			if (!chunkLoaded) {
-				return particles.values().stream()
-					.anyMatch(counts -> counts.portal >= PARTICLES_PER_FACE && counts.witch >= PARTICLES_PER_FACE);
+				return false;
 			}
 
-			return particles.entrySet().stream().allMatch(entry -> {
-				ParticleCounts counts = entry.getValue();
-				boolean enoughParticles = counts.portal >= PARTICLES_PER_FACE && counts.witch >= PARTICLES_PER_FACE;
-				boolean faceBlocked = !client.level.getBlockState(pos.relative(entry.getKey())).isAir();
-				return enoughParticles || faceBlocked;
-			});
+			for (Direction direction : Direction.values()) {
+				int i = direction.get3DDataValue();
+
+				if (portal[i] >= PARTICLES_PER_FACE && witch[i] >= PARTICLES_PER_FACE) {
+					continue;
+				}
+
+				if (level.getBlockState(pos.relative(direction)).isAir()) {
+					return false;
+				}
+			}
+
+			return true;
 		}
 
-		private void updateSeen(Minecraft client) {
-			if (SkyblockConfig.get().throughWalls || !SkyblockConfig.get().requireLineOfSightOnce) {
-				seen = true;
-				return;
-			}
-
-			if (seen || client.level == null || client.player == null) {
-				return;
-			}
-
-			if (!client.level.hasChunk(pos.getX() >> 4, pos.getZ() >> 4)) {
-				return;
-			}
-
-			BlockHitResult hit = client.level.clip(new ClipContext(
-				client.player.getEyePosition(),
-				Vec3.atCenterOf(pos),
-				ClipContext.Block.OUTLINE,
-				ClipContext.Fluid.NONE,
-				client.player
-			));
-
-			if (hit.getType() == HitResult.Type.MISS || hit.getBlockPos().equals(pos)) {
-				seen = true;
-			}
-		}
-
-		private boolean shouldDiscard(Minecraft client, long now) {
+		private boolean shouldDiscard(Level level, long now) {
 			if (pinned) {
 				return false;
 			}
@@ -254,22 +237,9 @@ public final class EnderNodeTracker {
 				return true;
 			}
 
-			return client.level != null
-				&& client.level.hasChunk(pos.getX() >> 4, pos.getZ() >> 4)
-				&& client.level.getBlockState(pos).isAir();
+			return level != null
+				&& level.hasChunk(pos.getX() >> 4, pos.getZ() >> 4)
+				&& level.getBlockState(pos).isAir();
 		}
-
-		private boolean shouldRender() {
-			if (lastConfirmed == 0) {
-				return false;
-			}
-
-			return SkyblockConfig.get().throughWalls || seen;
-		}
-	}
-
-	private static final class ParticleCounts {
-		private int portal;
-		private int witch;
 	}
 }

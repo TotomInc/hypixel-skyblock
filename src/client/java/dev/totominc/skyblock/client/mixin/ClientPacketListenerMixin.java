@@ -8,12 +8,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.protocol.game.ClientboundLevelParticlesPacket;
 
-import dev.totominc.skyblock.client.event.ParticleEvents;
+import dev.totominc.skyblock.client.end.EnderNodeTracker;
 
 @Mixin(ClientPacketListener.class)
 public class ClientPacketListenerMixin {
-	@Inject(method = "handleParticleEvent", at = @At("RETURN"))
+	@Inject(method = "handleParticleEvent", at = @At("HEAD"))
 	private void hypixelskyblock$onParticle(ClientboundLevelParticlesPacket packet, CallbackInfo ci) {
-		ParticleEvents.FROM_SERVER.invoker().onParticleFromServer(packet);
+		EnderNodeTracker.onParticle(packet);
 	}
 }

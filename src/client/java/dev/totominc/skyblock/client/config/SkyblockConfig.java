@@ -18,16 +18,11 @@ public final class SkyblockConfig {
 	private static SkyblockConfig instance = new SkyblockConfig();
 
 	public boolean enderNodeHelper = true;
-	public boolean throughWalls = true;
-	public boolean requireLineOfSightOnce = false;
 	public boolean debugForceTheEnd = false;
 	public float[] frameColor = {0.086f, 0.612f, 0.612f};
 	public float fillAlpha = 0.28f;
 	public float frameAlpha = 0.95f;
 	public float frameThickness = 0.04f;
-
-	public SkyblockConfig() {
-	}
 
 	public static SkyblockConfig get() {
 		return instance;

@@ -1,31 +1,28 @@
 {
 	"schemaVersion": 1,
-	"id": "modid",
+	"id": "hypixelskyblock",
 	"version": "${version}",
-	"name": "Example Mod",
-	"description": "This is an example description! Tell everyone what your mod is about!",
+	"name": "Hypixel SkyBlock",
+	"description": "Unofficial Fabric client helper for Hypixel SkyBlock. Highlights Ender Nodes in The End with through-wall frames.",
 	"authors": [
-		"Me!"
+		"TotomInc"
 	],
 	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
+		"homepage": "https://github.com/TotomInc/hypixel-skyblock",
+		"sources": "https://github.com/TotomInc/hypixel-skyblock",
+		"issues": "https://github.com/TotomInc/hypixel-skyblock/issues"
 	},
 	"license": "CC0-1.0",
-	"icon": "assets/modid/icon.png",
-	"environment": "*",
+	"icon": "assets/hypixelskyblock/icon.png",
+	"environment": "client",
 	"entrypoints": {
-		"main": [
-			"com.example.ExampleMod"
-		],
 		"client": [
-			"com.example.client.ExampleModClient"
+			"dev.totominc.skyblock.client.SkyblockClient"
 		]
 	},
 	"mixins": [
-		"modid.mixins.json",
 		{
-			"config": "modid.client.mixins.json",
+			"config": "hypixelskyblock.client.mixins.json",
 			"environment": "client"
 		}
 	],
@@ -34,5 +31,15 @@
 		"minecraft": "~26.2",
 		"java": ">=25",
 		"fabric-api": "*"
+	},
+	"suggests": {
+		"modmenu": "*"
+	},
+	"custom": {
+		"modmenu": {
+			"links": {
+				"modmenu.github_releases": "https://github.com/TotomInc/hypixel-skyblock/releases"
+			}
+		}
 	}
 }
